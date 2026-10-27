@@ -7,6 +7,7 @@
     Ctrl+X without selection cut the whole line
     Ctrl+Y                   redo
     Alt+Left/Right           move the card (and its nested lines) to the previous/next column
+    Shift+Tab                remove one indent level from the line(s)
     Ctrl+F                   ask the window to open the find bar
 """
 from PySide6.QtCore import Qt
@@ -34,6 +35,8 @@ def handle_key(editor, event):
         editor.redo()
     elif key in (Qt.Key_Left, Qt.Key_Right) and mods == ALT:
         move_card(editor, right=key == Qt.Key_Right)
+    elif key == Qt.Key_Backtab:
+        outdent(editor)
     elif key == Qt.Key_F and mods == CTRL:
         editor.find_requested.emit()
     else:
@@ -115,6 +118,21 @@ def insert_line(editor, below):
     cursor.insertText(indent)
     cursor.endEditBlock()
     editor.setTextCursor(cursor)
+
+
+def outdent(editor):
+    first, last = selected_blocks(editor)
+    cursor = editor.textCursor()
+    cursor.beginEditBlock()
+    block = first
+    while block.isValid() and block.position() <= last.position():
+        text = block.text()
+        n = 1 if text.startswith("\t") else len(text) - len(text.lstrip(" "))
+        n = min(n, 4)
+        if n:
+            text_between(editor, block.position(), block.position() + n).removeSelectedText()
+        block = block.next()
+    cursor.endEditBlock()
 
 
 def cut_line(editor):
