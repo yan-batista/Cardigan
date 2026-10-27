@@ -43,9 +43,8 @@ def render(projects):
                 out.append(f'<div class="card"><div class="t">{inline(title)}</div>')
                 if content:
                     out.append('<div class="c">')
-                    for depth, body in content:
-                        pad = (depth - 1) * 12 if depth > 1 else 0
-                        out.append(f'<div style="padding-left:{pad}px">{inline(body)}</div>')
+                    for _, body in content:
+                        out.append(f"<div>{inline(body)}</div>")
                     out.append("</div>")
                 out.append("</div>")
             out.append("</div>")
