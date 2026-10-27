@@ -18,6 +18,23 @@ h1 { font-size:20px; margin:28px 0 12px; } h1:first-child { margin-top:0; }
 .card .t { font-weight:600; }
 .card .c { color:var(--mute); font-size:13px; margin-top:4px; }
 .card .c div { margin-top:2px; }
+.card .c { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.card { cursor:pointer; }
+dialog { background:var(--bg); color:var(--fg); border:0; border-radius:12px; padding:0;
+         width:min(720px, 92vw); max-height:86vh; overflow:auto; box-shadow:0 12px 48px rgba(0,0,0,.45); }
+dialog::backdrop { background:rgba(0,0,0,.6); }
+.m-head { padding:20px 56px 12px 24px; }
+.m-title { font-size:20px; font-weight:600; line-height:1.3; }
+.m-list { color:var(--mute); font-size:13px; margin-top:4px; }
+.m-close { position:absolute; top:12px; right:12px; width:32px; height:32px; border:0; border-radius:6px;
+           background:none; color:var(--mute); font-size:20px; cursor:pointer; }
+.m-close:hover { background:var(--col); color:var(--fg); }
+.m-body { padding:4px 24px 24px; }
+.m-body h3 { font-size:14px; margin:16px 0 8px; }
+.m-body .c { display:block; overflow:visible; margin:0; font-size:14px; color:var(--fg); background:var(--card);
+             border-radius:8px; padding:10px 12px; }
+.m-body .c div { margin-top:4px; } .m-body .c div:first-child { margin-top:0; }
+.m-body .none { color:var(--mute); font-style:italic; }
 .empty { color:var(--mute); font-size:12px; margin:0 4px 4px; }
 """
 
@@ -40,7 +57,7 @@ def render(projects):
             if not cards:
                 out.append('<div class="empty">empty</div>')
             for title, content in cards:
-                out.append(f'<div class="card"><div class="t">{inline(title)}</div>')
+                out.append(f'<div class="card" data-col="{html.escape(col, quote=True)}"><div class="t">{inline(title)}</div>')
                 if content:
                     out.append('<div class="c">')
                     for _, body in content:
@@ -52,5 +69,19 @@ def render(projects):
     if len(out) == 1:
         out.append('<p class="empty">Nothing to show. Start with "# Project" and "## Column".</p>')
     # Chromium zooms the page on Ctrl+wheel; cancel it
-    script = "<script>addEventListener('wheel',e=>{if(e.ctrlKey)e.preventDefault()},{passive:false})</script>"
+    script = '''<dialog id=m><button class=m-close aria-label=Close>&times;</button>
+<div class=m-head><div class=m-title></div><div class=m-list></div></div>
+<div class=m-body><h3>Description</h3><div class=m-desc></div></div></dialog><script>
+addEventListener('wheel',e=>{if(e.ctrlKey)e.preventDefault()},{passive:false});
+const m=document.getElementById('m'),q=s=>m.querySelector(s);
+document.addEventListener('click',e=>{
+  const c=e.target.closest('.card');if(!c||e.target.closest('a'))return;
+  q('.m-title').innerHTML=c.querySelector('.t').innerHTML;
+  q('.m-list').textContent=c.dataset.col?'in list '+c.dataset.col:'';
+  const d=c.querySelector('.c');
+  q('.m-desc').innerHTML=d?d.outerHTML:'<div class=none>No description</div>';
+  m.showModal();m.scrollTop=0});
+q('.m-close').onclick=()=>m.close();
+m.addEventListener('click',e=>{if(e.target===m)m.close()});
+</script>'''
     return "<!doctype html><meta charset=utf-8>" + "".join(out) + script

@@ -60,7 +60,7 @@ def text_between(editor, start, end):
 
 
 def lines_between(editor, start, end):
-    return text_between(editor, start, end).selectedText().split(" ")
+    return text_between(editor, start, end).selectedText().split("\u2029")
 
 
 def replace_range(editor, start, end, text, anchor, position):
