@@ -6,6 +6,8 @@
     Ctrl+Shift+Enter         new line above
     Ctrl+X without selection cut the whole line
     Ctrl+Y                   redo
+    Alt+Left/Right           move the card (and its nested lines) to the previous/next column
+    Ctrl+F                   ask the window to open the find bar
 """
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication, QTextCursor
@@ -30,6 +32,10 @@ def handle_key(editor, event):
         cut_line(editor)
     elif key == Qt.Key_Y and mods == CTRL:
         editor.redo()
+    elif key in (Qt.Key_Left, Qt.Key_Right) and mods == ALT:
+        move_card(editor, right=key == Qt.Key_Right)
+    elif key == Qt.Key_F and mods == CTRL:
+        editor.find_requested.emit()
     else:
         return False
     return True
@@ -54,7 +60,7 @@ def text_between(editor, start, end):
 
 
 def lines_between(editor, start, end):
-    return text_between(editor, start, end).selectedText().split(" ")
+    return text_between(editor, start, end).selectedText().split(" ")
 
 
 def replace_range(editor, start, end, text, anchor, position):
@@ -120,3 +126,72 @@ def cut_line(editor):
         start -= 1
     QGuiApplication.clipboard().setText(block.text() + "\n")
     text_between(editor, start, end).removeSelectedText()
+
+
+def indent_of(line):
+    expanded = line.expandtabs(4)
+    return len(expanded) - len(expanded.lstrip())
+
+
+def move_card(editor, right):
+    """Moves the top-level card at the cursor, with its nested lines, to the end of the adjacent column."""
+    lines = editor.toPlainText().split("\n")
+    n = editor.textCursor().blockNumber()
+    is_heading = lambda line: line.startswith(("# ", "## "))
+
+    def column_end(head):
+        end = head + 1
+        while end < len(lines) and not is_heading(lines[end]):
+            end += 1
+        return end
+
+    def column_base(head, end):
+        return next((indent_of(l) for l in lines[head + 1:end] if l.strip()), 0)
+
+    head = n
+    while head >= 0 and not is_heading(lines[head]):
+        head -= 1
+    if head < 0 or head == n or not lines[head].startswith("## ") or not lines[n].strip():
+        return
+    end = column_end(head)
+    base = column_base(head, end)
+    start = n
+    while start > head + 1 and (not lines[start].strip() or indent_of(lines[start]) > base):
+        start -= 1
+    stop = start + 1
+    while stop < end and (not lines[stop].strip() or indent_of(lines[stop]) > base):
+        stop += 1
+    while not lines[stop - 1].strip():
+        stop -= 1
+
+    if right:
+        target = end
+    else:
+        target = head - 1
+        while target >= 0 and not is_heading(lines[target]):
+            target -= 1
+    if not 0 <= target < len(lines) or not lines[target].startswith("## "):
+        return
+    target_end = column_end(target)
+    target_base = column_base(target, target_end)
+    insert = target_end
+    while insert > target + 1 and not lines[insert - 1].strip():
+        insert -= 1
+
+    card = lines[start:stop]
+    if target_base != base:
+        card = [" " * target_base + l.expandtabs(4)[base:] if l.strip() else l for l in card]
+    del lines[start:stop]
+    if insert > start:
+        insert -= stop - start
+    lines[insert:insert] = card
+
+    cursor = editor.textCursor()
+    cursor.beginEditBlock()
+    cursor.select(QTextCursor.Document)
+    cursor.insertText("\n".join(lines))
+    cursor.endEditBlock()
+    editor.setTextCursor(cursor)
+    cursor.setPosition(editor.document().findBlockByNumber(insert + n - start).position())
+    editor.setTextCursor(cursor)
+    editor.ensureCursorVisible()

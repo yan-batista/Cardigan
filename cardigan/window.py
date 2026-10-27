@@ -3,9 +3,10 @@ from pathlib import Path
 from PySide6.QtCore import QSettings, QTimer
 from PySide6.QtGui import QAction, QKeySequence, QTextCursor
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWidgets import QFileDialog, QMainWindow, QMessageBox, QSplitter, QStackedWidget
+from PySide6.QtWidgets import QFileDialog, QMainWindow, QMessageBox, QSplitter, QStackedWidget, QVBoxLayout, QWidget
 
 from .editor import Editor
+from .editor.findbar import FindBar
 from .parser import parse
 from .renderer import render
 from .sidebar import Sidebar
@@ -24,11 +25,19 @@ class Window(QMainWindow):
         self.stack = QStackedWidget()
         self.stack.addWidget(self.editor)
         self.stack.addWidget(self.view)
+        self.findbar = FindBar(self.editor)
+        self.editor.find_requested.connect(self.findbar.open)
+        main = QWidget()
+        column = QVBoxLayout(main)
+        column.setContentsMargins(0, 0, 0, 0)
+        column.setSpacing(0)
+        column.addWidget(self.stack)
+        column.addWidget(self.findbar)
         self.sidebar = Sidebar()
 
         splitter = QSplitter()
         splitter.addWidget(self.sidebar)
-        splitter.addWidget(self.stack)
+        splitter.addWidget(main)
         splitter.setSizes([220, 880])
         splitter.setStretchFactor(1, 1)
         splitter.setChildrenCollapsible(False)

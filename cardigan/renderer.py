@@ -51,4 +51,6 @@ def render(projects):
         out.append("</div>")
     if len(out) == 1:
         out.append('<p class="empty">Nothing to show. Start with "# Project" and "## Column".</p>')
-    return "<!doctype html><meta charset=utf-8>" + "".join(out)
+    # Chromium zooms the page on Ctrl+wheel; cancel it
+    script = "<script>addEventListener('wheel',e=>{if(e.ctrlKey)e.preventDefault()},{passive:false})</script>"
+    return "<!doctype html><meta charset=utf-8>" + "".join(out) + script

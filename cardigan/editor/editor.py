@@ -1,3 +1,4 @@
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QPlainTextEdit
 
@@ -8,6 +9,8 @@ from .shortcuts import handle_key
 
 class Editor(QPlainTextEdit):
     """Plain text editor with line numbers, heading colors and VS Code style line shortcuts."""
+
+    find_requested = Signal()
 
     def __init__(self):
         super().__init__()
@@ -26,3 +29,9 @@ class Editor(QPlainTextEdit):
     def keyPressEvent(self, event):
         if not handle_key(self, event):
             super().keyPressEvent(event)
+
+    def wheelEvent(self, event):
+        if event.modifiers() & Qt.ControlModifier:  # the default is to zoom
+            event.ignore()
+        else:
+            super().wheelEvent(event)
