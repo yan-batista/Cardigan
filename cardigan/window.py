@@ -25,6 +25,8 @@ class Window(QMainWindow):
 
         self.editor = Editor()
         self.view = QWebEngineView()
+        dark = self.palette().window().color().lightness() < 128
+        self.view.page().setBackgroundColor("#16191e" if dark else "#f4f5f7")  # matches --bg: no white flash while setHtml reloads
         self.stack = QStackedWidget()
         self.stack.addWidget(self.editor)
         self.stack.addWidget(self.view)
@@ -85,7 +87,9 @@ class Window(QMainWindow):
         view_menu = self.menuBar().addMenu("View")
         add(view_menu, "&Board / Editor", "Ctrl+M", self.toggle)
         side = add(view_menu, "&Sidebar", "Ctrl+B", self.sidebar.setVisible, checkable=True)
-        side.setChecked(True)
+        visible = self.settings.value("sidebarVisible", True, type=bool)
+        side.setChecked(visible)
+        self.sidebar.setVisible(visible)  # setChecked(False) emits no toggled: the action starts unchecked
 
         add(self.menuBar().addMenu("Tags"), "&Manage tags...", "", self.manage_tags)
 
@@ -219,4 +223,8 @@ class Window(QMainWindow):
         return True
 
     def closeEvent(self, event):
-        event.accept() if self.confirm_discard() else event.ignore()
+        if self.confirm_discard():
+            self.settings.setValue("sidebarVisible", not self.sidebar.isHidden())
+            event.accept()
+        else:
+            event.ignore()
