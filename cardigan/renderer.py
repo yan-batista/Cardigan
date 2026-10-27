@@ -2,6 +2,8 @@
 import html
 import re
 
+from .tags import resolve, text_color
+
 CSS = """
 :root { color-scheme: light dark; --bg:#f4f5f7; --col:#e4e6ea; --card:#fff; --fg:#1d2430; --mute:#5b6572; }
 @media (prefers-color-scheme: dark) { :root { --bg:#16191e; --col:#22262d; --card:#2d323b; --fg:#e6e9ee; --mute:#9aa4b2; } }
@@ -15,7 +17,10 @@ h1 { font-size:20px; margin:28px 0 12px; } h1:first-child { margin-top:0; }
           margin:2px 4px 10px; display:flex; justify-content:space-between; }
 .card { background:var(--card); border-radius:6px; padding:8px 10px; margin-bottom:8px;
         box-shadow:0 1px 2px rgba(0,0,0,.18); }
-.card .t { font-weight:600; }
+.card .t { font-weight:600; } .t:empty { display:none; }
+.tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; } .tags:empty, .m-tags:empty { display:none; }
+.tag { font-size:11px; font-weight:600; border-radius:3px; padding:1px 8px; }
+.m-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; }
 .card .c { color:var(--mute); font-size:13px; margin-top:4px; }
 .card .c div { margin-top:2px; }
 .card .c { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
@@ -46,7 +51,7 @@ def inline(s):
     return re.sub(r"(https?://[^\s<]+)", r'<a href="\1">\1</a>', s)
 
 
-def render(projects):
+def render(projects, registry=()):
     out = [f"<style>{CSS}</style>"]
     for name, columns, _ in projects:
         if name:
@@ -57,7 +62,11 @@ def render(projects):
             if not cards:
                 out.append('<div class="empty">empty</div>')
             for title, content in cards:
-                out.append(f'<div class="card" data-col="{html.escape(col, quote=True)}"><div class="t">{inline(title)}</div>')
+                title, chips = resolve(title, registry)
+                tags = "".join(f'<span class="tag" style="background:{bg};color:{text_color(bg)}">{label}</span>'
+                               for label, bg in chips)
+                out.append(f'<div class="card" data-col="{html.escape(col, quote=True)}"><div class="t">{inline(title)}</div>'
+                           f'<div class="tags">{tags}</div>')
                 if content:
                     out.append('<div class="c">')
                     for _, body in content:
@@ -70,13 +79,14 @@ def render(projects):
         out.append('<p class="empty">Nothing to show. Start with "# Project" and "## Column".</p>')
     # Chromium zooms the page on Ctrl+wheel; cancel it
     script = '''<dialog id=m><button class=m-close aria-label=Close>&times;</button>
-<div class=m-head><div class=m-title></div><div class=m-list></div></div>
+<div class=m-head><div class=m-title></div><div class=m-tags></div><div class=m-list></div></div>
 <div class=m-body><h3>Description</h3><div class=m-desc></div></div></dialog><script>
 addEventListener('wheel',e=>{if(e.ctrlKey)e.preventDefault()},{passive:false});
 const m=document.getElementById('m'),q=s=>m.querySelector(s);
 document.addEventListener('click',e=>{
   const c=e.target.closest('.card');if(!c||e.target.closest('a'))return;
   q('.m-title').innerHTML=c.querySelector('.t').innerHTML;
+  q('.m-tags').innerHTML=c.querySelector('.tags').innerHTML;
   q('.m-list').textContent=c.dataset.col?'in list '+c.dataset.col:'';
   const d=c.querySelector('.c');
   q('.m-desc').innerHTML=d?d.outerHTML:'<div class=none>No description</div>';

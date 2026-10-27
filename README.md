@@ -33,6 +33,12 @@ A small example:
 - Update skill description
 ```
 
+## Tags
+
+Write `[BACKEND]` or `[BACKEND:RED]` in a card's title and it shows as a colored chip on the board. Colors are red, orange, yellow, green, blue, purple, pink, gray or `#rrggbb`; a tag with no color is gray.
+
+**Tags → Manage tags...** keeps a list of tags for the whole app: a name, one alias and a color. With `DATABASE` aliased as `DB` and colored blue, `[DB]` shows a blue "Database" chip. A color set there always wins over one written in the text. The list lives in `~/.config/cardigan/tags.json`.
+
 ## Run it
 
 Needs Python 3.10+ and [PySide6](https://pypi.org/project/PySide6/) (with Qt WebEngine).
@@ -68,6 +74,8 @@ The editor also has line numbers, and colors the `#` and `##` lines (the colors 
 cardigan/
 ├── parser.py       markdown text -> projects, columns, cards
 ├── renderer.py     parsed projects -> board HTML and CSS
+├── tags.py         tag syntax and the tag list file
+├── tagsdialog.py   the Manage tags window
 ├── theme.py        heading colors and style tweaks
 ├── sidebar.py      the project list
 ├── window.py       main window, menus, open and save

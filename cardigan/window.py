@@ -10,6 +10,8 @@ from .editor.findbar import FindBar
 from .parser import parse
 from .renderer import render
 from .sidebar import Sidebar
+from . import tags
+from .tagsdialog import TagsDialog
 
 
 class Window(QMainWindow):
@@ -18,6 +20,7 @@ class Window(QMainWindow):
         self.settings = QSettings("cardigan", "cardigan")
         self.path = None
         self.projects = []
+        self.registry = tags.load()
         self.selected = -1  # index into self.projects, -1 shows all of them
 
         self.editor = Editor()
@@ -84,6 +87,19 @@ class Window(QMainWindow):
         side = add(view_menu, "&Sidebar", "Ctrl+B", self.sidebar.setVisible, checkable=True)
         side.setChecked(True)
 
+        add(self.menuBar().addMenu("Tags"), "&Manage tags...", "", self.manage_tags)
+
+    def manage_tags(self):
+        dialog = TagsDialog(self.registry, self)
+        if dialog.exec():
+            self.registry = dialog.registry()
+            try:
+                tags.save(self.registry)
+            except OSError as err:
+                QMessageBox.warning(self, "Save failed", f"{tags.PATH}\n\n{err}")
+            if self.in_board():
+                self.show_board()
+
     def fill_recent(self):
         self.recent_menu.clear()
         recent = [r for r in self.settings.value("recent", "").split("\n") if r]
@@ -117,7 +133,7 @@ class Window(QMainWindow):
 
     def show_board(self):
         shown = self.projects if self.selected < 0 else [self.projects[self.selected]]
-        self.view.setHtml(render(shown))
+        self.view.setHtml(render(shown, self.registry))
 
     def toggle(self):
         if self.in_board():

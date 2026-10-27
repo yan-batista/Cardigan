@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QProxyStyle, QStyle
 # Colors of the "# project" and "## column" lines in the editor: (light theme, dark theme).
 PROJECT_COLOR = ("#b45309", "#f5a65b")
 COLUMN_COLOR = ("#0f6cbd", "#6cb6ff")
+TAG_COLOR = ("#ea580c", "#ff9f43")
 
 
 def mix(a, b, t):
