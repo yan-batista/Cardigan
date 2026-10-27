@@ -11,6 +11,7 @@ class Gutter(QWidget):
     def __init__(self, editor):
         super().__init__(editor)
         self.editor = editor
+        self.collapsed = set()  # ordinals of the folded headings
         self.hover = -1  # block number under the mouse
         self.setMouseTracking(True)
         editor.blockCountChanged.connect(self.update_width)
@@ -45,29 +46,65 @@ class Gutter(QWidget):
         text = block.text()
         return 1 if text.startswith("# ") else 2 if text.startswith("## ") else 0
 
-    def folded(self, block):
-        return self.level(block) > 0 and block.next().isValid() and not block.next().isVisible()
+    def headings(self):
+        block, found = self.editor.document().begin(), []
+        while block.isValid():
+            if self.level(block):
+                found.append(block)
+            block = block.next()
+        return found
 
-    def toggle_fold(self, block):
-        level, hide = self.level(block), not self.folded(block)
-        block = block.next()
-        body = []
+    def body(self, head):
+        """The lines a fold of this heading hides: up to the next heading of the same or higher level, minus trailing blank lines."""
+        level, body, block = self.level(head), [], head.next()
         while block.isValid() and not 0 < self.level(block) <= level:
             body.append(block)
             block = block.next()
         while body and not body[-1].text().strip():  # trailing blank lines belong to no fold
             body.pop()
-        for block in body:
-            block.setVisible(not hide)
+        return body
+
+    def ordinal(self, head):
+        return sum(1 for h in self.headings() if h.position() < head.position())
+
+    def folded(self, block):
+        return self.level(block) > 0 and self.ordinal(block) in self.collapsed and bool(self.body(block))
+
+    def toggle_fold(self, block):
+        self.collapsed ^= {self.ordinal(block)}
+        self.apply()
+        cursor = self.editor.textCursor()  # keep the cursor out of the hidden lines
+        while not cursor.block().isVisible():
+            cursor.movePosition(cursor.MoveOperation.PreviousBlock)
+        self.editor.setTextCursor(cursor)
+
+    def reveal(self, block):
+        """Unfolds just the headings that enclose this block."""
+        if block.isVisible():
+            return
+        stack = []  # the headings above the block, nearest of each level
+        for head in self.headings():
+            if head.position() > block.position():
+                break
+            stack = [h for h in stack if self.level(h) < self.level(head)] + [head]
+        for head in stack:
+            self.collapsed.discard(self.ordinal(head))
+        self.apply()
+
+    def apply(self):
+        """Shows every line, then hides the body of each collapsed heading."""
         doc = self.editor.document()
+        block = doc.begin()
+        while block.isValid():
+            block.setVisible(True)
+            block = block.next()
+        for number, head in enumerate(self.headings()):
+            if number in self.collapsed:
+                for line in self.body(head):
+                    line.setVisible(False)
         doc.markContentsDirty(0, doc.characterCount())
         self.editor.viewport().update()
         self.update()
-        cursor = self.editor.textCursor()  # keep the cursor out of the hidden lines
-        if hide and not cursor.block().isVisible():
-            while not cursor.block().isVisible():
-                cursor.movePosition(cursor.MoveOperation.PreviousBlock)
-            self.editor.setTextCursor(cursor)
 
     def block_at(self, y):
         return self.editor.cursorForPosition(QPoint(0, y)).block()

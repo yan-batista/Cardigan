@@ -27,7 +27,10 @@ class Editor(QPlainTextEdit):
         self.gutter.reposition()
 
     def keyPressEvent(self, event):
-        if not handle_key(self, event):
+        if handle_key(self, event):
+            self.gutter.apply()  # edits recreate the blocks as visible, so refold them
+            self.gutter.reveal(self.textCursor().block())
+        else:
             super().keyPressEvent(event)
 
     def wheelEvent(self, event):
