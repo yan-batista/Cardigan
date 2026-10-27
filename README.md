@@ -58,6 +58,7 @@ The sidebar lists your projects with their card counts. In the editor, clicking 
 | Ctrl+Enter | New line below |
 | Ctrl+Shift+Enter | New line above |
 | Ctrl+X with no selection | Cut the whole line |
+| Ctrl+Y | Redo |
 
 The editor also has line numbers, and colors the `#` and `##` lines (the colors are in `cardigan/theme.py`).
 

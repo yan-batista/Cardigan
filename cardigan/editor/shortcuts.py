@@ -5,6 +5,7 @@
     Ctrl+Enter               new line below
     Ctrl+Shift+Enter         new line above
     Ctrl+X without selection cut the whole line
+    Ctrl+Y                   redo
 """
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication, QTextCursor
@@ -27,6 +28,8 @@ def handle_key(editor, event):
         insert_line(editor, below=mods == CTRL)
     elif key == Qt.Key_X and mods == CTRL and not editor.textCursor().hasSelection():
         cut_line(editor)
+    elif key == Qt.Key_Y and mods == CTRL:
+        editor.redo()
     else:
         return False
     return True
