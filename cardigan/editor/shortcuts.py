@@ -7,6 +7,7 @@
     Ctrl+X without selection cut the whole line
     Ctrl+Y                   redo
     Alt+Left/Right           move the card (and its nested lines) to the previous/next column
+    Ctrl+Up/Down             jump to the previous/next column or project heading
     Shift+Tab                remove one indent level from the line(s)
     Ctrl+F                   ask the window to open the find bar
 """
@@ -27,6 +28,8 @@ def handle_key(editor, event):
         move_lines(editor, up=key == Qt.Key_Up)
     elif key in (Qt.Key_Up, Qt.Key_Down) and mods == ALT_SHIFT:
         copy_lines(editor, up=key == Qt.Key_Up)
+    elif key in (Qt.Key_Up, Qt.Key_Down) and mods == CTRL:
+        jump_heading(editor, up=key == Qt.Key_Up)
     elif key in (Qt.Key_Return, Qt.Key_Enter) and mods in (CTRL, CTRL_SHIFT):
         insert_line(editor, below=mods == CTRL)
     elif key == Qt.Key_X and mods == CTRL and not editor.textCursor().hasSelection():
@@ -103,6 +106,18 @@ def copy_lines(editor, up):
     else:
         shift = len(text) + 1
         replace_range(editor, end, end, "\n" + text, cursor.anchor() + shift, cursor.position() + shift)
+
+
+def jump_heading(editor, up):
+    """Moves the cursor to the nearest visible heading above or below; headings hidden by a fold are skipped."""
+    here = editor.textCursor().block().position()
+    heads = [h for h in editor.gutter.headings() if h.isVisible()]
+    heads = [h for h in reversed(heads) if h.position() < here] if up else [h for h in heads if h.position() > here]
+    if heads:
+        cursor = editor.textCursor()
+        cursor.setPosition(heads[0].position())
+        editor.setTextCursor(cursor)
+        editor.ensureCursorVisible()
 
 
 def insert_line(editor, below):
